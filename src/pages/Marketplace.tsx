@@ -36,11 +36,28 @@ export default function MarketplacePage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("listings")
-      .select("*, profiles:farmer_id(full_name, location, phone)")
+      .select("*")
       .eq("status", "active")
       .order("created_at", { ascending: false });
-    if (error) toast.error(error.message);
-    setListings(data ?? []);
+    if (error) {
+      toast.error(error.message);
+      setListings([]);
+      setLoading(false);
+      return;
+    }
+
+    const farmerIds = Array.from(new Set((data ?? []).map((l) => l.farmer_id)));
+    let profilesMap: Record<string, any> = {};
+    if (farmerIds.length > 0) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, full_name, location, phone")
+        .in("id", farmerIds);
+      profilesMap = Object.fromEntries((profs ?? []).map((p) => [p.id, p]));
+    }
+
+    const merged = (data ?? []).map((l) => ({ ...l, profiles: profilesMap[l.farmer_id] ?? null }));
+    setListings(merged);
     setLoading(false);
   }
 
