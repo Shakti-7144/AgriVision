@@ -1,16 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Upload, Loader2, Sparkles, Store, Trash2, ImageIcon } from "lucide-react";
+import { Loader2, Sparkles, Store, Trash2, ImageIcon, Info, Percent } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import FarmerOrders from "@/components/dashboard/FarmerOrders";
+import { resolveReferencePrice, type Quality } from "@/lib/cropPrices";
 
 interface AnalysisResult {
   cropDetected: boolean;
@@ -25,6 +25,8 @@ interface AnalysisResult {
   storageTips: string;
   suggestedPrice: string;
 }
+
+const PLATFORM_COMMISSION_PCT = 2.5;
 
 const qualityClass = (q: string) =>
   q === "EXCELLENT" ? "bg-quality-excellent text-primary-foreground"
@@ -50,6 +52,9 @@ export default function FarmerDashboard() {
   const [history, setHistory] = useState<any[]>([]);
   const [listing, setListing] = useState(false);
 
+  // Farmer's custom price (overrides AI/dataset suggestion)
+  const [customPrice, setCustomPrice] = useState<string>("");
+
   useEffect(() => {
     if (user) loadHistory();
   }, [user]);
@@ -70,7 +75,27 @@ export default function FarmerDashboard() {
     setPreview(URL.createObjectURL(f));
     setResult(null);
     setAnalysisId(null);
+    setCustomPrice("");
   }
+
+  // Reference price from dataset (or AI fallback) for the analysis
+  const refPrice = useMemo(() => {
+    if (!result) return null;
+    const aiPriceMatch = (result.suggestedPrice ?? "").match(/(\d+(\.\d+)?)/);
+    const aiPrice = aiPriceMatch ? Number(aiPriceMatch[1]) : 20;
+    const cropName = result.cropName && result.cropName !== "N/A" ? result.cropName : cropType;
+    return resolveReferencePrice(cropName, result.quality as Quality, aiPrice);
+  }, [result, cropType]);
+
+  // Effective listing price = farmer override or reference
+  const effectivePrice = useMemo(() => {
+    const c = Number(customPrice);
+    if (customPrice && !isNaN(c) && c > 0) return c;
+    return refPrice?.price ?? 0;
+  }, [customPrice, refPrice]);
+
+  const estTotal = effectivePrice * Number(quantity || 0);
+  const estCommission = (estTotal * PLATFORM_COMMISSION_PCT) / 100;
 
   async function handleAnalyze() {
     if (!file || !user) return toast.error("Choose an image first");
@@ -78,7 +103,6 @@ export default function FarmerDashboard() {
 
     setAnalyzing(true);
     try {
-      // 1) upload to storage
       const ext = file.name.split(".").pop() ?? "jpg";
       const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
       const { error: upErr } = await supabase.storage
@@ -89,7 +113,6 @@ export default function FarmerDashboard() {
       const url = pub.publicUrl;
       setImageUrl(url);
 
-      // 2) call edge function
       const { data, error } = await supabase.functions.invoke("analyze-crop", {
         body: { imageUrl: url, cropType, location },
       });
@@ -99,7 +122,6 @@ export default function FarmerDashboard() {
       const analysis = data.analysis as AnalysisResult;
       setResult(analysis);
 
-      // 3) save to DB
       const { data: saved, error: saveErr } = await supabase
         .from("crop_analyses")
         .insert({
@@ -136,8 +158,6 @@ export default function FarmerDashboard() {
 
   async function handleListMarketplace() {
     if (!result || !analysisId || !imageUrl || !user) return;
-
-    // Guard: don't list non-crops or invalid analyses
     if (!result.cropDetected) {
       return toast.error("No crop detected in image. Please re-analyze with a clear crop photo.");
     }
@@ -145,15 +165,22 @@ export default function FarmerDashboard() {
     if (!validQualities.includes(result.quality as any)) {
       return toast.error(`Invalid quality "${result.quality}". Cannot list this analysis.`);
     }
+    if (!effectivePrice || effectivePrice <= 0) {
+      return toast.error("Please set a valid price per kg");
+    }
 
     setListing(true);
     try {
-      // Extract numeric price from suggested string e.g. "₹22/kg"
-      const priceStr = result.suggestedPrice ?? "";
-      const m = priceStr.match(/(\d+(\.\d+)?)/);
-      const price = m ? Number(m[1]) : 20;
-
       const cropName = result.cropName && result.cropName !== "N/A" ? result.cropName : (cropType || "Unknown");
+
+      // Embed harvest date + price metadata into description (no schema change)
+      const descParts: string[] = [];
+      if (result.recommendation) descParts.push(result.recommendation);
+      if (harvestDate) descParts.push(`__HARVEST__:${harvestDate}`);
+      const aiPriceMatch = (result.suggestedPrice ?? "").match(/(\d+(\.\d+)?)/);
+      const aiPrice = aiPriceMatch ? Number(aiPriceMatch[1]) : null;
+      if (aiPrice) descParts.push(`__AI_PRICE__:${aiPrice}`);
+      if (refPrice) descParts.push(`__REF_PRICE__:${refPrice.price}|${refPrice.source}|${refPrice.market ?? ""}`);
 
       const payload = {
         farmer_id: user.id,
@@ -163,9 +190,9 @@ export default function FarmerDashboard() {
         quality: result.quality,
         disease_detected: result.diseaseDetected,
         quantity_kg: Number(quantity),
-        price_per_kg: price,
+        price_per_kg: effectivePrice,
         location,
-        description: result.recommendation ?? "",
+        description: descParts.join("\n"),
       };
 
       const { error } = await supabase.from("listings").insert(payload);
@@ -190,6 +217,17 @@ export default function FarmerDashboard() {
 
   return (
     <DashboardLayout title="Farmer Dashboard">
+      {/* Commission notice */}
+      <div className="mb-6 rounded-2xl border border-accent/40 bg-accent/10 p-4 flex gap-3 items-start">
+        <Percent className="h-5 w-5 text-accent-foreground mt-0.5 shrink-0" />
+        <div className="text-sm">
+          <p className="font-semibold">Platform fee: 2 – 2.5% commission on total sales</p>
+          <p className="text-muted-foreground">
+            A minimum of 2% (up to 2.5%) of every successful order is retained by AgriVision as the platform fee. The remainder is paid out to you.
+          </p>
+        </div>
+      </div>
+
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Upload + form */}
         <section className="bg-card rounded-2xl border border-border p-6 shadow-soft">
@@ -253,10 +291,50 @@ export default function FarmerDashboard() {
 
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <Stat label="Confidence" value={`${result.confidence}%`} />
-                <Stat label="Suggested price" value={result.suggestedPrice} accent />
+                <Stat label="AI suggested" value={result.suggestedPrice} accent />
                 <Stat label="Freshness" value={result.freshness} />
                 <Stat label="Damage" value={result.damageLevel} />
                 <Stat label="Disease" value={result.diseaseDetected ? (result.diseaseName ?? "Yes") : "None"} />
+                {refPrice && (
+                  <Stat
+                    label={refPrice.source === "dataset" ? `Market ref (${refPrice.market})` : "AI predicted (no dataset)"}
+                    value={`₹${refPrice.price.toFixed(2)}/kg`}
+                  />
+                )}
+              </div>
+
+              {/* Custom price override */}
+              <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-2">
+                <div className="flex items-start gap-2">
+                  <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                  <div className="text-xs text-muted-foreground">
+                    Don't agree with the estimate? Set your own price per kg below — buyers will see whether your price is fair vs market.
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 items-end">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Your price (₹/kg)</Label>
+                    <Input
+                      type="number" min="1" step="0.01"
+                      placeholder={refPrice ? refPrice.price.toFixed(2) : "Enter price"}
+                      value={customPrice}
+                      onChange={(e) => setCustomPrice(e.target.value)}
+                    />
+                  </div>
+                  <div className="text-xs space-y-0.5">
+                    <p className="text-muted-foreground">Listing price</p>
+                    <p className="font-display text-xl font-bold text-primary">₹{effectivePrice.toFixed(2)}/kg</p>
+                  </div>
+                </div>
+                {Number(quantity) > 0 && (
+                  <div className="text-xs text-muted-foreground border-t border-border/60 pt-2 space-y-0.5">
+                    <div className="flex justify-between"><span>Estimated total</span><span>₹{estTotal.toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span>Platform commission ({PLATFORM_COMMISSION_PCT}%)</span><span>− ₹{estCommission.toFixed(2)}</span></div>
+                    <div className="flex justify-between font-semibold text-foreground pt-1 border-t border-border/60">
+                      <span>You receive (excl. delivery)</span><span>₹{(estTotal - estCommission).toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="rounded-xl bg-secondary/60 p-4">
