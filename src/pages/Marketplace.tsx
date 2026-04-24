@@ -57,6 +57,7 @@ function parseListingMeta(desc: string | null) {
 export default function MarketplacePage() {
   const { user, role } = useAuth();
   const [listings, setListings] = useState<any[]>([]);
+  const [ratingsMap, setRatingsMap] = useState<Record<string, { avg: number; count: number }>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [qualityFilter, setQualityFilter] = useState<string>("ALL");
@@ -83,6 +84,7 @@ export default function MarketplacePage() {
       .from("listings")
       .select("*")
       .eq("status", "active")
+      .gt("quantity_kg", 0)
       .order("created_at", { ascending: false });
     if (error) {
       toast.error(error.message);
@@ -100,6 +102,30 @@ export default function MarketplacePage() {
         .in("id", farmerIds);
       profilesMap = Object.fromEntries((profs ?? []).map((p) => [p.id, p]));
     }
+
+    // Fetch ratings (notes JSON contains rating) for these listings
+    const listingIds = (data ?? []).map((l) => l.id);
+    const rmap: Record<string, { avg: number; count: number }> = {};
+    if (listingIds.length > 0) {
+      const { data: rated } = await supabase
+        .from("orders")
+        .select("listing_id, notes")
+        .in("listing_id", listingIds)
+        .not("notes", "is", null);
+      (rated ?? []).forEach((o: any) => {
+        try {
+          const m = JSON.parse(o.notes);
+          if (typeof m?.rating === "number" && m.rating > 0) {
+            const cur = rmap[o.listing_id] ?? { avg: 0, count: 0 };
+            const total = cur.avg * cur.count + m.rating;
+            cur.count += 1;
+            cur.avg = total / cur.count;
+            rmap[o.listing_id] = cur;
+          }
+        } catch { /* ignore */ }
+      });
+    }
+    setRatingsMap(rmap);
 
     const merged = (data ?? []).map((l) => ({ ...l, profiles: profilesMap[l.farmer_id] ?? null }));
     setListings(merged);
