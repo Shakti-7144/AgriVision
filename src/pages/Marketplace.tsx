@@ -8,13 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Sparkles, ShieldAlert, Search, Clock, Calendar, TrendingUp, TrendingDown, CheckCircle2, AlertTriangle } from "lucide-react";
+import { MapPin, Sparkles, ShieldAlert, Search, Clock, Calendar, TrendingUp, TrendingDown, CheckCircle2, AlertTriangle, Star } from "lucide-react";
 import { toast } from "sonner";
 import Navbar from "@/components/site/Navbar";
 import Footer from "@/components/site/Footer";
 import { Link } from "react-router-dom";
 import { evaluatePriceSuitability, type Quality } from "@/lib/cropPrices";
 import { timeAgo, formatDate } from "@/lib/timeAgo";
+import { INDIAN_STATES } from "@/lib/indianStates";
 
 const qualityClass = (q: string) =>
   q === "EXCELLENT" ? "bg-quality-excellent text-primary-foreground"
