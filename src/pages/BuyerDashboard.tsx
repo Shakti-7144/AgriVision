@@ -49,24 +49,35 @@ export default function BuyerDashboard() {
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
-          {orders.map((o) => (
-            <div key={o.id} className="bg-card border border-border rounded-2xl p-5 shadow-soft flex gap-4">
-              <img src={o.listings?.image_url} alt="" className="h-24 w-24 rounded-xl object-cover" />
-              <div className="flex-1">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold">{o.listings?.crop_name}</p>
-                    <p className="text-xs text-muted-foreground">{o.listings?.location}</p>
+          {orders.map((o) => {
+            let meta: any = {};
+            try { meta = o.notes ? JSON.parse(o.notes) : {}; } catch { meta = {}; }
+            const subtotal = Number(meta.subtotal ?? o.total_price);
+            const charge = Number(meta.delivery_charge ?? 0);
+            return (
+              <div key={o.id} className="bg-card border border-border rounded-2xl p-5 shadow-soft flex gap-4">
+                <img src={o.listings?.image_url} alt="" className="h-24 w-24 rounded-xl object-cover" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate">{o.listings?.crop_name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{o.listings?.location}</p>
+                    </div>
+                    <Badge className={`${statusClass[o.status] ?? ""} border-0 capitalize`}>{o.status}</Badge>
                   </div>
-                  <Badge className={`${statusClass[o.status] ?? ""} border-0 capitalize`}>{o.status}</Badge>
-                </div>
-                <div className="mt-2 text-sm">
-                  <p>{o.quantity_kg} kg · <strong>₹{Number(o.total_price).toFixed(2)}</strong></p>
-                  <p className="text-xs text-muted-foreground mt-1">{new Date(o.created_at).toLocaleDateString()}</p>
+                  <p className="text-sm mt-2">{o.quantity_kg} kg</p>
+                  <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                    <div className="flex justify-between"><span>Subtotal</span><span>₹{subtotal.toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span>Delivery</span><span>₹{charge.toFixed(2)}</span></div>
+                    <div className="flex justify-between text-foreground font-semibold pt-1 border-t border-border mt-1">
+                      <span>Total</span><span>₹{Number(o.total_price).toFixed(2)}</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">{new Date(o.created_at).toLocaleDateString()}</p>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </DashboardLayout>
