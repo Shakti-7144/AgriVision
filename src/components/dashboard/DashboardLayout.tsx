@@ -27,6 +27,9 @@ export default function DashboardLayout({ title, children }: { title: string; ch
             {role === "buyer" && (
               <Link to="/buyer"><Button variant="ghost" size="sm"><ShoppingBag className="h-4 w-4" />My Orders</Button></Link>
             )}
+            {role === "farmer" && (
+              <Link to="/farmer/orders"><Button variant="ghost" size="sm"><ShoppingBag className="h-4 w-4" />My Orders</Button></Link>
+            )}
           </nav>
 
           <div className="flex items-center gap-3">
