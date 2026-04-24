@@ -79,6 +79,26 @@ export default function FarmerOrders() {
         .update({ status: status as any, total_price: total, notes: JSON.stringify(meta) })
         .eq("id", o.id);
       if (error) throw error;
+
+      // On acceptance, decrement listing's available quantity (and mark sold if depleted)
+      if (status === "accepted" && o.listing_id) {
+        const { data: listing } = await supabase
+          .from("listings")
+          .select("quantity_kg")
+          .eq("id", o.listing_id)
+          .maybeSingle();
+        if (listing) {
+          const remaining = Math.max(0, Number(listing.quantity_kg) - Number(o.quantity_kg));
+          await supabase
+            .from("listings")
+            .update({
+              quantity_kg: remaining,
+              ...(remaining === 0 ? { status: "sold" as any } : {}),
+            })
+            .eq("id", o.listing_id);
+        }
+      }
+
       toast.success(`Order ${status}`);
       load();
     } catch (e: any) {

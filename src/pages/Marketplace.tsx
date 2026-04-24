@@ -8,13 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Sparkles, ShieldAlert, Search, Clock, Calendar, TrendingUp, TrendingDown, CheckCircle2, AlertTriangle } from "lucide-react";
+import { MapPin, Sparkles, ShieldAlert, Search, Clock, Calendar, TrendingUp, TrendingDown, CheckCircle2, AlertTriangle, Star } from "lucide-react";
 import { toast } from "sonner";
 import Navbar from "@/components/site/Navbar";
 import Footer from "@/components/site/Footer";
 import { Link } from "react-router-dom";
 import { evaluatePriceSuitability, type Quality } from "@/lib/cropPrices";
 import { timeAgo, formatDate } from "@/lib/timeAgo";
+import { INDIAN_STATES } from "@/lib/indianStates";
 
 const qualityClass = (q: string) =>
   q === "EXCELLENT" ? "bg-quality-excellent text-primary-foreground"
@@ -56,6 +57,7 @@ function parseListingMeta(desc: string | null) {
 export default function MarketplacePage() {
   const { user, role } = useAuth();
   const [listings, setListings] = useState<any[]>([]);
+  const [ratingsMap, setRatingsMap] = useState<Record<string, { avg: number; count: number }>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [qualityFilter, setQualityFilter] = useState<string>("ALL");
@@ -82,6 +84,7 @@ export default function MarketplacePage() {
       .from("listings")
       .select("*")
       .eq("status", "active")
+      .gt("quantity_kg", 0)
       .order("created_at", { ascending: false });
     if (error) {
       toast.error(error.message);
@@ -99,6 +102,30 @@ export default function MarketplacePage() {
         .in("id", farmerIds);
       profilesMap = Object.fromEntries((profs ?? []).map((p) => [p.id, p]));
     }
+
+    // Fetch ratings (notes JSON contains rating) for these listings
+    const listingIds = (data ?? []).map((l) => l.id);
+    const rmap: Record<string, { avg: number; count: number }> = {};
+    if (listingIds.length > 0) {
+      const { data: rated } = await supabase
+        .from("orders")
+        .select("listing_id, notes")
+        .in("listing_id", listingIds)
+        .not("notes", "is", null);
+      (rated ?? []).forEach((o: any) => {
+        try {
+          const m = JSON.parse(o.notes);
+          if (typeof m?.rating === "number" && m.rating > 0) {
+            const cur = rmap[o.listing_id] ?? { avg: 0, count: 0 };
+            const total = cur.avg * cur.count + m.rating;
+            cur.count += 1;
+            cur.avg = total / cur.count;
+            rmap[o.listing_id] = cur;
+          }
+        } catch { /* ignore */ }
+      });
+    }
+    setRatingsMap(rmap);
 
     const merged = (data ?? []).map((l) => ({ ...l, profiles: profilesMap[l.farmer_id] ?? null }));
     setListings(merged);
@@ -225,8 +252,19 @@ export default function MarketplacePage() {
                     )}
                   </div>
                   <div className="p-5">
-                    <h3 className="font-semibold text-lg">{l.crop_name}</h3>
-                    <p className="text-sm text-muted-foreground">by {l.profiles?.full_name ?? "Farmer"}</p>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-lg truncate">{l.crop_name}</h3>
+                        <p className="text-sm text-muted-foreground truncate">by {l.profiles?.full_name ?? "Farmer"}</p>
+                      </div>
+                      {ratingsMap[l.id] && (
+                        <div className="flex items-center gap-1 rounded-full bg-accent/15 border border-accent/30 px-2 py-0.5 shrink-0">
+                          <Star className="h-3.5 w-3.5 fill-accent text-accent" />
+                          <span className="text-xs font-semibold">{ratingsMap[l.id].avg.toFixed(1)}</span>
+                          <span className="text-[10px] text-muted-foreground">({ratingsMap[l.id].count})</span>
+                        </div>
+                      )}
+                    </div>
                     <div className="flex items-center gap-1.5 mt-2 text-sm text-muted-foreground">
                       <MapPin className="h-4 w-4" />{l.location}
                     </div>
@@ -281,6 +319,16 @@ export default function MarketplacePage() {
                 <p><strong>Location:</strong> {selected.location}</p>
                 <p><strong>Quality:</strong> {selected.quality} · <strong>Available:</strong> {selected.quantity_kg} kg</p>
                 <p><strong>Price:</strong> ₹{selected.price_per_kg}/kg</p>
+                {ratingsMap[selected.id] && (
+                  <div className="flex items-center gap-1 pt-1">
+                    {[1,2,3,4,5].map(n => (
+                      <Star key={n} className={`h-4 w-4 ${n <= Math.round(ratingsMap[selected.id].avg) ? "fill-accent text-accent" : "text-muted-foreground"}`} />
+                    ))}
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      {ratingsMap[selected.id].avg.toFixed(1)} average · {ratingsMap[selected.id].count} buyer review{ratingsMap[selected.id].count === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5 pt-1">
                   <span className="flex items-center gap-1"><Clock className="h-3 w-3" />Listed {timeAgo(selected.created_at)} ({formatDate(selected.created_at)})</span>
                   {selMeta?.harvestDate && (
@@ -338,7 +386,14 @@ export default function MarketplacePage() {
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs">State</Label>
-                        <Input value={buyerState} onChange={(e) => setBuyerState(e.target.value)} placeholder="State" />
+                        <Select value={buyerState} onValueChange={setBuyerState}>
+                          <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
+                          <SelectContent className="max-h-72">
+                            {INDIAN_STATES.map((s) => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     <div className="space-y-1.5">

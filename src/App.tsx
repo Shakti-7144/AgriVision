@@ -11,6 +11,7 @@ import Auth from "./pages/Auth.tsx";
 import DashboardRouter from "./pages/DashboardRouter.tsx";
 import Marketplace from "./pages/Marketplace.tsx";
 import BuyerDashboard from "./pages/BuyerDashboard.tsx";
+import FarmerOrdersPage from "./pages/FarmerOrdersPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/dashboard" element={<ProtectedRoute><DashboardRouter /></ProtectedRoute>} />
             <Route path="/buyer" element={<ProtectedRoute allow={["buyer", "admin"]}><BuyerDashboard /></ProtectedRoute>} />
+            <Route path="/farmer/orders" element={<ProtectedRoute allow={["farmer", "admin"]}><FarmerOrdersPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
