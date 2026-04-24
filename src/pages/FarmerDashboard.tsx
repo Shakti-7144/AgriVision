@@ -290,7 +290,7 @@ export default function FarmerDashboard() {
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <Stat label="Confidence" value={`${result.confidence}%`} />
+                <Stat label="AI Accuracy" value={`${result.confidence}%`} />
                 <Stat label="AI suggested" value={result.suggestedPrice} accent />
                 <Stat label="Freshness" value={result.freshness} />
                 <Stat label="Damage" value={result.damageLevel} />
