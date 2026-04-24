@@ -135,29 +135,47 @@ export default function FarmerDashboard() {
 
   async function handleListMarketplace() {
     if (!result || !analysisId || !imageUrl || !user) return;
+
+    // Guard: don't list non-crops or invalid analyses
+    if (!result.cropDetected) {
+      return toast.error("No crop detected in image. Please re-analyze with a clear crop photo.");
+    }
+    const validQualities = ["EXCELLENT", "GOOD", "POOR"] as const;
+    if (!validQualities.includes(result.quality as any)) {
+      return toast.error(`Invalid quality "${result.quality}". Cannot list this analysis.`);
+    }
+
     setListing(true);
     try {
       // Extract numeric price from suggested string e.g. "₹22/kg"
-      const m = result.suggestedPrice.match(/(\d+(\.\d+)?)/);
+      const priceStr = result.suggestedPrice ?? "";
+      const m = priceStr.match(/(\d+(\.\d+)?)/);
       const price = m ? Number(m[1]) : 20;
 
-      const { error } = await supabase.from("listings").insert({
+      const cropName = result.cropName && result.cropName !== "N/A" ? result.cropName : (cropType || "Unknown");
+
+      const payload = {
         farmer_id: user.id,
         analysis_id: analysisId,
-        crop_name: result.cropName,
+        crop_name: cropName,
         image_url: imageUrl,
         quality: result.quality,
         disease_detected: result.diseaseDetected,
         quantity_kg: Number(quantity),
         price_per_kg: price,
         location,
-        description: result.recommendation,
-      });
-      if (error) throw error;
+        description: result.recommendation ?? "",
+      };
+
+      const { error } = await supabase.from("listings").insert(payload);
+      if (error) {
+        console.error("List marketplace error:", error, "payload:", payload);
+        throw error;
+      }
       toast.success("Listed in marketplace!");
       navigate("/marketplace");
     } catch (e: any) {
-      toast.error(e.message);
+      toast.error(e.message ?? "Failed to list in marketplace");
     } finally {
       setListing(false);
     }
