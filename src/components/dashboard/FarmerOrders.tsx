@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Package, MapPin, Phone, User } from "lucide-react";
+import { Loader2, Package, MapPin, Phone, User, Copy, Star } from "lucide-react";
 
 const statusClass: Record<string, string> = {
   pending: "bg-accent text-accent-foreground",
@@ -17,13 +17,18 @@ const statusClass: Record<string, string> = {
   cancelled: "bg-destructive text-destructive-foreground",
 };
 
+const PLATFORM_COMMISSION_PCT = 2.5;
+
 type OrderMeta = {
   buyer_name?: string;
   buyer_phone?: string;
   buyer_address?: string;
+  address_parts?: { house?: string; street?: string; city?: string; state?: string; pincode?: string };
   notes?: string;
   subtotal?: number;
   delivery_charge?: number;
+  rating?: number;
+  review?: string;
 };
 
 function parseMeta(notes: string | null): OrderMeta {
