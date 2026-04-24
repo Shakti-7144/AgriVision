@@ -26,6 +26,11 @@ export default function MarketplacePage() {
   const [qualityFilter, setQualityFilter] = useState<string>("ALL");
   const [selected, setSelected] = useState<any | null>(null);
   const [orderQty, setOrderQty] = useState("");
+  const [buyerName, setBuyerName] = useState("");
+  const [buyerPhone, setBuyerPhone] = useState("");
+  const [buyerAddress, setBuyerAddress] = useState("");
+  const [orderNotes, setOrderNotes] = useState("");
+  const [step, setStep] = useState<"form" | "review">("form");
   const [placing, setPlacing] = useState(false);
 
   useEffect(() => {
