@@ -1,0 +1,49 @@
+Crop,Quality,Price_per_kg,Market
+Bajra,EXCELLENT,25.64,National Market
+Bajra,GOOD,19.72,National Market
+Bajra,POOR,13.80,National Market
+Barley,EXCELLENT,27.58,National Market
+Barley,GOOD,21.21,National Market
+Barley,POOR,14.85,National Market
+Wheat,EXCELLENT,33.52,National Market
+Wheat,GOOD,25.78,National Market
+Wheat,POOR,18.05,National Market
+Cotton,EXCELLENT,108.58,National Market
+Cotton,GOOD,83.53,National Market
+Cotton,POOR,58.47,National Market
+Soyabean,EXCELLENT,72.94,National Market
+Soyabean,GOOD,56.11,National Market
+Soyabean,POOR,39.28,National Market
+Bengal Gram,EXCELLENT,69.07,National Market
+Bengal Gram,GOOD,53.13,National Market
+Bengal Gram,POOR,37.19,National Market
+Rice Basmati,EXCELLENT,83.20,Delhi Wholesale
+Rice Basmati,GOOD,64.00,Delhi Wholesale
+Rice Basmati,POOR,44.80,Delhi Wholesale
+Arhar Dal,EXCELLENT,97.50,Delhi Wholesale
+Arhar Dal,GOOD,75.00,Delhi Wholesale
+Arhar Dal,POOR,52.50,Delhi Wholesale
+Sugar,EXCELLENT,53.95,Delhi Wholesale
+Sugar,GOOD,41.50,Delhi Wholesale
+Sugar,POOR,29.05,Delhi Wholesale
+Peas,EXCELLENT,27.30,Delhi Wholesale
+Peas,GOOD,21.00,Delhi Wholesale
+Peas,POOR,14.70,Delhi Wholesale
+Brinjal,EXCELLENT,25.35,Delhi Wholesale
+Brinjal,GOOD,19.50,Delhi Wholesale
+Brinjal,POOR,13.65,Delhi Wholesale
+Ladyfinger,EXCELLENT,91.00,Delhi Wholesale
+Ladyfinger,GOOD,70.00,Delhi Wholesale
+Ladyfinger,POOR,49.00,Delhi Wholesale
+Ginger,EXCELLENT,68.90,Delhi Wholesale
+Ginger,GOOD,53.00,Delhi Wholesale
+Ginger,POOR,37.10,Delhi Wholesale
+Onion (April),EXCELLENT,13.56,National Market
+Onion (April),GOOD,10.43,National Market
+Onion (April),POOR,7.30,National Market
+Potato (April),EXCELLENT,7.68,National Market
+Potato (April),GOOD,5.91,National Market
+Potato (April),POOR,4.14,National Market
+Tomato (April),EXCELLENT,23.10,National Market
+Tomato (April),GOOD,17.77,National Market
+Tomato (April),POOR,12.44,National Market
