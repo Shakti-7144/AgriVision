@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Upload, Loader2, Sparkles, Store, Trash2, ImageIcon } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import FarmerOrders from "@/components/dashboard/FarmerOrders";
 
 interface AnalysisResult {
   cropDetected: boolean;
@@ -275,6 +276,12 @@ export default function FarmerDashboard() {
           )}
         </section>
       </div>
+
+      {/* Incoming orders */}
+      <section className="mt-8">
+        <h2 className="font-display text-xl font-semibold mb-4">Incoming orders</h2>
+        <FarmerOrders />
+      </section>
 
       {/* History */}
       <section className="mt-8">

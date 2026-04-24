@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapPin, Sparkles, ShieldAlert, Search } from "lucide-react";
@@ -26,6 +27,11 @@ export default function MarketplacePage() {
   const [qualityFilter, setQualityFilter] = useState<string>("ALL");
   const [selected, setSelected] = useState<any | null>(null);
   const [orderQty, setOrderQty] = useState("");
+  const [buyerName, setBuyerName] = useState("");
+  const [buyerPhone, setBuyerPhone] = useState("");
+  const [buyerAddress, setBuyerAddress] = useState("");
+  const [orderNotes, setOrderNotes] = useState("");
+  const [step, setStep] = useState<"form" | "review">("form");
   const [placing, setPlacing] = useState(false);
 
   useEffect(() => {
@@ -72,19 +78,37 @@ export default function MarketplacePage() {
     if (!selected) return;
     const qty = Number(orderQty);
     if (!qty || qty <= 0 || qty > Number(selected.quantity_kg)) return toast.error("Enter a valid quantity");
+    if (!buyerName.trim() || !buyerPhone.trim() || !buyerAddress.trim()) return toast.error("Fill name, phone and address");
+
+    const subtotal = qty * Number(selected.price_per_kg);
+    const notesPayload = JSON.stringify({
+      buyer_name: buyerName.trim(),
+      buyer_phone: buyerPhone.trim(),
+      buyer_address: buyerAddress.trim(),
+      notes: orderNotes.trim(),
+      subtotal,
+      delivery_charge: 0,
+    });
+
     setPlacing(true);
     const { error } = await supabase.from("orders").insert({
       listing_id: selected.id,
       buyer_id: user.id,
       farmer_id: selected.farmer_id,
       quantity_kg: qty,
-      total_price: qty * Number(selected.price_per_kg),
+      total_price: subtotal,
+      notes: notesPayload,
     });
     setPlacing(false);
     if (error) return toast.error(error.message);
     toast.success("Order placed! The farmer has been notified.");
     setSelected(null);
     setOrderQty("");
+    setBuyerName("");
+    setBuyerPhone("");
+    setBuyerAddress("");
+    setOrderNotes("");
+    setStep("form");
   }
 
   return (
@@ -163,36 +187,92 @@ export default function MarketplacePage() {
         )}
       </section>
 
-      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <DialogContent>
+      <Dialog open={!!selected} onOpenChange={(o) => { if (!o) { setSelected(null); setStep("form"); } }}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           {selected && (
             <>
               <DialogHeader><DialogTitle>{selected.crop_name}</DialogTitle></DialogHeader>
-              <img src={selected.image_url} alt="" className="rounded-xl w-full h-48 object-cover" />
-              <div className="space-y-2 text-sm">
+              <img src={selected.image_url} alt="" className="rounded-xl w-full h-40 object-cover" />
+              <div className="space-y-1 text-sm">
                 <p><strong>Farmer:</strong> {selected.profiles?.full_name ?? "—"}</p>
                 <p><strong>Location:</strong> {selected.location}</p>
-                <p><strong>Quality:</strong> {selected.quality}</p>
-                <p><strong>Available:</strong> {selected.quantity_kg} kg</p>
+                <p><strong>Quality:</strong> {selected.quality} · <strong>Available:</strong> {selected.quantity_kg} kg</p>
                 <p><strong>Price:</strong> ₹{selected.price_per_kg}/kg</p>
                 {selected.description && <p className="text-muted-foreground">{selected.description}</p>}
               </div>
+
               {!user ? (
                 <Link to="/auth"><Button className="w-full" variant="hero">Sign in to order</Button></Link>
               ) : role === "farmer" ? (
                 <p className="text-sm text-muted-foreground">Switch to a buyer account to place orders.</p>
-              ) : (
+              ) : step === "form" ? (
                 <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label>Quantity (kg)</Label>
+                      <Input type="number" min="1" max={selected.quantity_kg} value={orderQty} onChange={(e) => setOrderQty(e.target.value)} placeholder="10" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Your name</Label>
+                      <Input value={buyerName} onChange={(e) => setBuyerName(e.target.value)} placeholder="Full name" />
+                    </div>
+                  </div>
                   <div className="space-y-1.5">
-                    <Label>Quantity (kg)</Label>
-                    <Input type="number" min="1" max={selected.quantity_kg} value={orderQty} onChange={(e) => setOrderQty(e.target.value)} />
+                    <Label>Phone number</Label>
+                    <Input value={buyerPhone} onChange={(e) => setBuyerPhone(e.target.value)} placeholder="+91 98765 43210" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Delivery address</Label>
+                    <Textarea value={buyerAddress} onChange={(e) => setBuyerAddress(e.target.value)} placeholder="House no, street, city, state, pincode" rows={3} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Notes for farmer (optional)</Label>
+                    <Input value={orderNotes} onChange={(e) => setOrderNotes(e.target.value)} placeholder="Any special instructions" />
                   </div>
                   {orderQty && Number(orderQty) > 0 && (
-                    <p className="text-sm">Total: <strong>₹{(Number(orderQty) * Number(selected.price_per_kg)).toFixed(2)}</strong></p>
+                    <div className="rounded-xl bg-secondary/60 p-3 text-sm">
+                      Subtotal: <strong>₹{(Number(orderQty) * Number(selected.price_per_kg)).toFixed(2)}</strong>
+                      <p className="text-xs text-muted-foreground mt-1">Delivery charges (if any) will be added by the farmer after they accept.</p>
+                    </div>
                   )}
-                  <Button className="w-full" variant="hero" disabled={placing} onClick={placeOrder}>
-                    {placing ? "Placing…" : "Confirm Order"}
+                  <Button
+                    className="w-full" variant="hero"
+                    onClick={() => {
+                      const qty = Number(orderQty);
+                      if (!qty || qty <= 0 || qty > Number(selected.quantity_kg)) return toast.error("Enter a valid quantity");
+                      if (!buyerName.trim() || !buyerPhone.trim() || !buyerAddress.trim()) return toast.error("Fill name, phone and address");
+                      setStep("review");
+                    }}
+                  >
+                    Review order
                   </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-border p-4 space-y-2 text-sm">
+                    <p className="font-semibold">Order summary</p>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Crop</span><span>{selected.crop_name}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Quantity</span><span>{orderQty} kg</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Price</span><span>₹{selected.price_per_kg}/kg</span></div>
+                    <div className="flex justify-between border-t border-border pt-2">
+                      <span>Subtotal</span>
+                      <strong>₹{(Number(orderQty) * Number(selected.price_per_kg)).toFixed(2)}</strong>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Final total will include delivery charges added by the farmer after acceptance.</p>
+                  </div>
+                  <div className="rounded-xl border border-border p-4 space-y-1 text-sm">
+                    <p className="font-semibold mb-1">Delivery to</p>
+                    <p>{buyerName}</p>
+                    <p className="text-muted-foreground">{buyerPhone}</p>
+                    <p className="text-muted-foreground whitespace-pre-line">{buyerAddress}</p>
+                    {orderNotes && <p className="text-muted-foreground italic mt-1">"{orderNotes}"</p>}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button variant="outline" onClick={() => setStep("form")} disabled={placing}>Back</Button>
+                    <Button variant="hero" disabled={placing} onClick={placeOrder}>
+                      {placing ? "Placing…" : "Confirm & place order"}
+                    </Button>
+                  </div>
                 </div>
               )}
             </>
