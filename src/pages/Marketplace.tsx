@@ -77,19 +77,37 @@ export default function MarketplacePage() {
     if (!selected) return;
     const qty = Number(orderQty);
     if (!qty || qty <= 0 || qty > Number(selected.quantity_kg)) return toast.error("Enter a valid quantity");
+    if (!buyerName.trim() || !buyerPhone.trim() || !buyerAddress.trim()) return toast.error("Fill name, phone and address");
+
+    const subtotal = qty * Number(selected.price_per_kg);
+    const notesPayload = JSON.stringify({
+      buyer_name: buyerName.trim(),
+      buyer_phone: buyerPhone.trim(),
+      buyer_address: buyerAddress.trim(),
+      notes: orderNotes.trim(),
+      subtotal,
+      delivery_charge: 0,
+    });
+
     setPlacing(true);
     const { error } = await supabase.from("orders").insert({
       listing_id: selected.id,
       buyer_id: user.id,
       farmer_id: selected.farmer_id,
       quantity_kg: qty,
-      total_price: qty * Number(selected.price_per_kg),
+      total_price: subtotal,
+      notes: notesPayload,
     });
     setPlacing(false);
     if (error) return toast.error(error.message);
     toast.success("Order placed! The farmer has been notified.");
     setSelected(null);
     setOrderQty("");
+    setBuyerName("");
+    setBuyerPhone("");
+    setBuyerAddress("");
+    setOrderNotes("");
+    setStep("form");
   }
 
   return (
