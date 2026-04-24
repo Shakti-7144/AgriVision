@@ -386,7 +386,14 @@ export default function MarketplacePage() {
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs">State</Label>
-                        <Input value={buyerState} onChange={(e) => setBuyerState(e.target.value)} placeholder="State" />
+                        <Select value={buyerState} onValueChange={setBuyerState}>
+                          <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
+                          <SelectContent className="max-h-72">
+                            {INDIAN_STATES.map((s) => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     <div className="space-y-1.5">
