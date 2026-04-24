@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Loader2, Sparkles, Store, Trash2, ImageIcon, Info, Percent } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import FarmerOrders from "@/components/dashboard/FarmerOrders";
+import MyListings from "@/components/dashboard/MyListings";
 import { resolveReferencePrice, type Quality } from "@/lib/cropPrices";
 
 interface AnalysisResult {
@@ -359,6 +360,13 @@ export default function FarmerDashboard() {
       <section className="mt-8">
         <h2 className="font-display text-xl font-semibold mb-4">Incoming orders</h2>
         <FarmerOrders />
+      </section>
+
+      {/* My listings (with editable price) */}
+      <section className="mt-8">
+        <h2 className="font-display text-xl font-semibold mb-4">My listings</h2>
+        <p className="text-sm text-muted-foreground mb-4">Update the price of any active listing — the new price applies to future orders only.</p>
+        <MyListings />
       </section>
 
       {/* History */}
