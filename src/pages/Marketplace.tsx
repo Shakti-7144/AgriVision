@@ -319,6 +319,16 @@ export default function MarketplacePage() {
                 <p><strong>Location:</strong> {selected.location}</p>
                 <p><strong>Quality:</strong> {selected.quality} · <strong>Available:</strong> {selected.quantity_kg} kg</p>
                 <p><strong>Price:</strong> ₹{selected.price_per_kg}/kg</p>
+                {ratingsMap[selected.id] && (
+                  <div className="flex items-center gap-1 pt-1">
+                    {[1,2,3,4,5].map(n => (
+                      <Star key={n} className={`h-4 w-4 ${n <= Math.round(ratingsMap[selected.id].avg) ? "fill-accent text-accent" : "text-muted-foreground"}`} />
+                    ))}
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      {ratingsMap[selected.id].avg.toFixed(1)} average · {ratingsMap[selected.id].count} buyer review{ratingsMap[selected.id].count === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5 pt-1">
                   <span className="flex items-center gap-1"><Clock className="h-3 w-3" />Listed {timeAgo(selected.created_at)} ({formatDate(selected.created_at)})</span>
                   {selMeta?.harvestDate && (
