@@ -32,13 +32,16 @@ AgriVision provides an AI-driven solution where farmers can:
 👉 All within seconds, using a simple mobile-friendly interface
 
 🚀 How It Works
+
 📸 Farmer uploads crop image
 🤖 AI analyzes using computer vision
 📊 System provides:
 Quality rating
 Predicted market price
 💼 Farmer makes data-driven selling decisions
+
 🔥 Key Features
+
 🤖 AI-powered crop grading
 💵 Smart price prediction
 📱 Clean, responsive UI (mobile-friendly)
@@ -53,21 +56,30 @@ Farmers list crops directly
 Buyers connect without middlemen
 AI ensures trust via quality verification
 Logistics integration for delivery 🚚
+
 💸 Business Model
+
 Commission per marketplace transaction
 Premium AI insights subscription
 B2B partnerships (mandis, exporters, agri-companies)
 Data analytics services for agri-businesses
+
 📈 Market Opportunity
+
 🌍 140M+ farmers in India
 📊 Agriculture contributes ~18% of GDP
 🚀 Growing demand for AI-driven AgriTech solutions
+
+
 🧠 Tech Stack
+
 Frontend: HTML, CSS, JavaScript
 Backend: Node.js
 AI: Google Gemini Vision API
 Data: CSV-based crop pricing dataset
 Deployment: Vercel / Netlify
+
+
 🎯 Unique Selling Point
 
 “From image to income in seconds”
@@ -75,6 +87,7 @@ Deployment: Vercel / Netlify
 No hardware required
 No technical knowledge needed
 Works directly from a smartphone
+
 📊 Real-World Use Case
 
 A farmer harvests tomatoes 🍅
@@ -84,16 +97,21 @@ A farmer harvests tomatoes 🍅
 → Earns higher profit
 
 🏆 Why This Project Stands Out
+
 Solves a real-world, large-scale problem
 Applies AI in a practical and impactful way
 Clear and scalable business model
 High potential for real-world adoption
+
+
 🚀 Future Scope
 📦 Smart logistics integration
 📈 AI-based price forecasting
 🌦️ Weather-based crop advisory
 🏦 Financial services (loans & insurance)
 🌐 Multi-language & voice support
+
+
 👨‍💻 Author
 
 Shakti Singh
