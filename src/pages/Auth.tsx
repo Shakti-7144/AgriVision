@@ -50,7 +50,7 @@ export default function Auth() {
     });
     setLoading(false);
     if (error) return toast.error(error.message);
-    toast.success("Account created! You can now sign in.");
+    toast.success("Account created! Please check your email to verify.");
   }
 
   return (
